@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tailwind CSS 演示</title>
+  <!-- 使用 CDN 快速体验（生产环境建议本地构建） -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // 自定义配置演示
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#6366f1',
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 min-h-screen transition-colors duration-300">
+  
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    
+    <!-- 标题 + 深色模式切换 -->
+    <header class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-800 dark:text-white">
+        Tailwind CSS 功能演示
+      </h1>
+      <button 
+        onclick="document.documentElement.classList.toggle('dark')"
+        class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+      >
+        🌓 切换主题
+      </button>
+    </header>
+
+    <!-- 1. 工具类基础 -->
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+        1. 原子化工具类
+      </h2>
+      <div class="flex flex-wrap gap-3">
+        <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition-colors">
+          蓝色按钮
+        </button>
+        <button class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-full transition-colors">
+          圆角按钮
+        </button>
+        <button class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-2 px-4 rounded-lg transition-all">
+          渐变按钮
+        </button>
+        <button class="border-2 border-gray-500 text-gray-700 dark:text-gray-300 font-bold py-2 px-4 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+          边框按钮
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. 响应式设计 -->
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+        2. 响应式设计 <span class="text-sm font-normal text-gray-500">（调整浏览器宽度查看效果）</span>
+      </h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-red-100 dark:bg-red-900 p-4 rounded-lg text-center">
+          <span class="text-red-600 dark:text-red-300 font-medium">卡片 1</span>
+        </div>
+        <div class="bg-yellow-100 dark:bg-yellow-900 p-4 rounded-lg text-center">
+          <span class="text-yellow-600 dark:text-yellow-300 font-medium">卡片 2</span>
+        </div>
+        <div class="bg-green-100 dark:bg-green-900 p-4 rounded-lg text-center">
+          <span class="text-green-600 dark:text-green-300 font-medium">卡片 3</span>
+        </div>
+        <div class="bg-blue-100 dark:bg-blue-900 p-4 rounded-lg text-center">
+          <span class="text-blue-600 dark:text-blue-300 font-medium">卡片 4</span>
+        </div>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mt-3">
+        手机: 1列 | 平板(sm): 2列 | 桌面(lg): 4列
+      </p>
+    </section>
+
+    <!-- 3. 状态变体 -->
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+        3. 状态变体
+      </h2>
+      <div class="space-y-4">
+        <input 
+          type="text" 
+          placeholder="聚焦时显示蓝色边框"
+          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                 dark:bg-gray-700 dark:text-white transition-all"
+        />
+        <div class="group p-4 bg-gray-50 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-brand hover:text-white transition-all">
+          <p class="text-gray-600 dark:text-gray-300 group-hover:text-white">
+            👆 悬停此区域（group-hover 演示）
+          </p>
+          <span class="text-sm text-gray-400 group-hover:text-gray-200">
+            子元素也会响应父元素的悬停状态
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Flexbox & Grid -->
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+        4. Flexbox 布局
+      </h2>
+      <div class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+        <div class="flex items-center space-x-3">
+          <div class="w-12 h-12 bg-brand rounded-full flex items-center justify-center text-white font-bold">
+            JF
+          </div>
+          <div>
+            <p class="font-medium text-gray-800 dark:text-white">用户名</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">user@example.com</p>
+          </div>
+        </div>
+        <button class="text-brand hover:text-purple-700 font-medium">
+          编辑
+        </button>
+      </div>
+    </section>
+
+    <!-- 5. 任意值 -->
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+        5. 任意值语法 <code class="text-sm bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">[value]</code>
+      </h2>
+      <div class="flex gap-4 items-end">
+        <div class="w-[137px] h-[80px] bg-[#bada55] rounded flex items-center justify-center text-black font-mono text-sm">
+          w-[137px]
+        </div>
+        <div class="w-24 h-24 bg-[rgb(255,100,50)] rounded flex items-center justify-center text-white font-mono text-sm">
+          bg-[rgb()]
+        </div>
+        <div class="p-[13px] bg-gray-200 dark:bg-gray-600 rounded text-gray-700 dark:text-gray-200 font-mono text-sm">
+          p-[13px]
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. 动画效果 -->
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6">
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+        6. 动画效果
+      </h2>
+      <div class="flex gap-6 items-center">
+        <div class="w-8 h-8 bg-blue-500 rounded-full animate-bounce"></div>
+        <div class="w-8 h-8 bg-green-500 rounded animate-spin"></div>
+        <div class="w-8 h-8 bg-yellow-500 rounded animate-ping"></div>
+        <div class="w-16 h-4 bg-gray-300 dark:bg-gray-600 rounded animate-pulse"></div>
+      </div>
+    </section>
+
+    <!-- 7. 卡片组件示例 -->
+    <section class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+      <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-4">
+        7. 完整卡片组件
+      </h2>
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
+          <div class="h-40 bg-gradient-to-br from-blue-400 to-purple-500"></div>
+          <div class="p-5">
+            <span class="inline-block px-3 py-1 text-xs font-semibold text-blue-600 bg-blue-100 dark:bg-blue-900 dark:text-blue-300 rounded-full mb-2">
+              新功能
+            </span>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">
+              Tailwind CSS v3.0
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">
+              JIT 引擎、任意值支持、更多颜色、滚动捕捉等新特性。
+            </p>
+            <a href="#" class="text-brand hover:underline font-medium text-sm">
+              了解更多 →
+            </a>
+          </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-700 rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
+          <div class="h-40 bg-gradient-to-br from-green-400 to-cyan-500"></div>
+          <div class="p-5">
+            <span class="inline-block px-3 py-1 text-xs font-semibold text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-300 rounded-full mb-2">
+              教程
+            </span>
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-2">
+              快速入门指南
+            </h3>
+            <p class="text-gray-600 dark:text-gray-300 text-sm mb-4">
+              从零开始学习 Tailwind，15 分钟掌握核心概念。
+            </p>
+            <a href="#" class="text-brand hover:underline font-medium text-sm">
+              开始学习 →
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="text-center text-gray-500 dark:text-gray-400 mt-8 text-sm">
+      使用 Tailwind CSS CDN 构建 · 点击右上角切换深色模式
+    </footer>
+  </div>
+
+</body>
+</html>
