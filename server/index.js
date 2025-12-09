@@ -16,6 +16,7 @@ function getRandomResponse() {
 }
 
 const server = http.createServer((req, res) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
   const url = new URL(req.url, `http://localhost:${PORT}`)
   
   // CORS 头
@@ -31,29 +32,42 @@ const server = http.createServer((req, res) => {
   
   // SSE 聊天接口
   if (url.pathname === '/api/chat' && req.method === 'POST') {
+    console.log('Matched /api/chat POST')
     let body = ''
-    req.on('data', chunk => { body += chunk })
+    let interval = null
+    
+    req.on('data', chunk => { 
+      console.log('Received data chunk:', chunk.toString())
+      body += chunk 
+    })
+    
     req.on('end', () => {
+      console.log('Request body complete:', body)
       // 设置 SSE 响应头
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no', // 禁用 nginx 缓冲
       })
+      res.flushHeaders() // 立即发送响应头
       
       const response = getRandomResponse()
       const chars = [...response] // 支持 emoji 等多字节字符
       let index = 0
       
+      console.log('Starting SSE stream, total chars:', chars.length)
+      
       // 模拟流式输出，每 30-80ms 发送一个字符
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (index < chars.length) {
           const data = JSON.stringify({ 
             type: 'delta', 
             content: chars[index],
             index 
           })
-          res.write(`data: ${data}\n\n`)
+          const written = res.write(`data: ${data}\n\n`)
+          console.log(`Wrote char ${index}: ${chars[index]}, success: ${written}`)
           index++
         } else {
           // 发送完成信号
@@ -62,12 +76,14 @@ const server = http.createServer((req, res) => {
           res.end()
         }
       }, 30 + Math.random() * 50)
-      
-      // 客户端断开时清理
-      req.on('close', () => {
-        clearInterval(interval)
-      })
     })
+    
+    // 客户端断开时清理 - 放在 req.on('end') 外部，监听 res 而不是 req
+    res.on('close', () => {
+      console.log('Response closed by client')
+      if (interval) clearInterval(interval)
+    })
+    
     return
   }
   

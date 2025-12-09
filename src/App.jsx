@@ -1,38 +1,54 @@
-import { useState, useCallback, useRef } from 'react'
-import MessageList from './components/MessageList'
-import ChatInput from './components/ChatInput'
+import { useState, useCallback, useRef, useEffect } from 'react'
+import { Bubble, Sender, Welcome, XProvider, Think } from '@ant-design/x'
+import { UserOutlined, RobotOutlined } from '@ant-design/icons'
+import { ConfigProvider, theme, Avatar } from 'antd'
 import { useSSE } from './hooks/useSSE'
-import { useAutoScroll } from './hooks/useAutoScroll'
 
 // 生成唯一 ID
 let messageId = 0
 const genId = () => `msg_${++messageId}_${Date.now()}`
 
+// 角色配置
+const roles = {
+  user: {
+    placement: 'end',
+  },
+  assistant: {
+    placement: 'start',
+    typing: { step: 2, interval: 50 },
+  },
+}
+
 function App() {
   const [messages, setMessages] = useState([])
   const [isLoading, setIsLoading] = useState(false)
+  const [inputValue, setInputValue] = useState('')
   const { sendMessage, abort } = useSSE()
   
   // 当前正在流式更新的消息 ID
   const streamingIdRef = useRef(null)
   
-  // 自动滚动 - 依赖消息列表变化
-  const { containerRef, handleScroll } = useAutoScroll(messages)
 
-  // 更新流式消息内容（使用函数式更新避免闭包问题）
+  // 更新流式消息内容
   const appendContent = useCallback((content) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === streamingIdRef.current
-        ? { ...msg, content: msg.content + content }
-        : msg
-    ))
+    console.log('[App] appendContent called:', content, 'streamingId:', streamingIdRef.current)
+    setMessages(prev => {
+      const updated = prev.map(msg => 
+        msg.key === streamingIdRef.current
+          // 收到内容后，关闭 loading 状态以显示内容
+          ? { ...msg, content: msg.content + content, loading: false }
+          : msg
+      )
+      console.log('[App] Messages updated:', updated)
+      return updated
+    })
   }, [])
 
   // 完成流式消息
   const finishStreaming = useCallback(() => {
     setMessages(prev => prev.map(msg =>
-      msg.id === streamingIdRef.current
-        ? { ...msg, isStreaming: false }
+      msg.key === streamingIdRef.current
+        ? { ...msg, loading: false }
         : msg
     ))
     streamingIdRef.current = null
@@ -41,26 +57,27 @@ function App() {
 
   // 发送消息
   const handleSend = useCallback((content) => {
+    if (!content.trim()) return
+    
     // 添加用户消息
     const userMessage = {
-      id: genId(),
+      key: genId(),
       role: 'user',
       content,
-      timestamp: Date.now(),
     }
     
     // 创建 AI 消息占位
     const aiMessage = {
-      id: genId(),
+      key: genId(),
       role: 'assistant',
       content: '',
-      timestamp: Date.now(),
-      isStreaming: true,
+      loading: true,
     }
     
-    streamingIdRef.current = aiMessage.id
+    streamingIdRef.current = aiMessage.key
     setMessages(prev => [...prev, userMessage, aiMessage])
     setIsLoading(true)
+    setInputValue('')
     
     // 发送 SSE 请求
     sendMessage(
@@ -77,8 +94,8 @@ function App() {
       (error) => {
         console.error('SSE Error:', error)
         setMessages(prev => prev.map(msg =>
-          msg.id === streamingIdRef.current
-            ? { ...msg, content: '抱歉，发生了错误，请重试。', isStreaming: false }
+          msg.key === streamingIdRef.current
+            ? { ...msg, content: '抱歉，发生了错误，请重试。', loading: false }
             : msg
         ))
         streamingIdRef.current = null
@@ -88,42 +105,142 @@ function App() {
   }, [sendMessage, appendContent, finishStreaming])
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* 头部 */}
-      <header className="flex-shrink-0 border-b border-gray-200 bg-white px-4 py-3">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
-              AI
-            </div>
-            <div>
-              <h1 className="font-semibold text-gray-900">AI 助手</h1>
-              <p className="text-xs text-gray-500">SSE 流式对话演示</p>
-            </div>
-          </div>
-          
-          {/* 状态指示器 */}
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-400 animate-pulse' : 'bg-green-400'}`} />
-            <span className="text-sm text-gray-500">
-              {isLoading ? '正在输入...' : '在线'}
-            </span>
-          </div>
-        </div>
-      </header>
-      
-      {/* 消息区域 */}
-      <main 
-        ref={containerRef}
-        onScroll={handleScroll}
-        className="flex-1 overflow-y-auto custom-scrollbar"
+    <XProvider>
+      <ConfigProvider
+        theme={{
+          algorithm: theme.defaultAlgorithm,
+          token: {
+            colorPrimary: '#1677ff',
+          },
+        }}
       >
-        <MessageList messages={messages} />
-      </main>
-      
-      {/* 输入区域 */}
-      <ChatInput onSend={handleSend} disabled={isLoading} />
-    </div>
+        <div style={{ 
+          height: '100vh', 
+          display: 'flex', 
+          flexDirection: 'column',
+          background: '#f5f5f5',
+        }}>
+          {/* 头部 */}
+          <header style={{
+            padding: '16px 24px',
+            background: '#fff',
+            borderBottom: '1px solid #e8e8e8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #1677ff 0%, #722ed1 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#fff',
+                fontWeight: 'bold',
+              }}>
+                <RobotOutlined style={{ fontSize: 20 }} />
+              </div>
+              <div>
+                <h1 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>AI 助手</h1>
+                <p style={{ margin: 0, fontSize: 12, color: '#999' }}>基于 Ant Design X 构建</p>
+              </div>
+            </div>
+            
+            {/* 状态指示器 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: isLoading ? '#faad14' : '#52c41a',
+                animation: isLoading ? 'pulse 1.5s infinite' : 'none',
+              }} />
+              <span style={{ fontSize: 14, color: '#666' }}>
+                {isLoading ? '正在输入...' : '在线'}
+              </span>
+            </div>
+          </header>
+          
+          {/* 消息区域 */}
+          <main style={{ 
+            flex: 1, 
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            padding: '24px',
+          }}>
+            <div style={{ maxWidth: 800, width: '100%', margin: '0 auto', flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              {messages.length === 0 ? (
+                <Welcome
+                  icon={<RobotOutlined style={{ fontSize: 48, color: '#1677ff' }} />}
+                  title="欢迎使用 AI 助手"
+                  description="我是基于 Ant Design X 构建的智能对话助手，支持 SSE 流式响应。发送一条消息开始对话吧！"
+                  style={{
+                    background: '#fff',
+                    borderRadius: 12,
+                    padding: 32,
+                    marginTop: 60,
+                  }}
+                />
+              ) : (
+                <>
+                  <Bubble.List
+                    autoScroll
+                    items={messages.map(msg => ({
+                      ...msg,
+                      ...roles[msg.role],
+                      // 为 AI 消息添加思维过程组件（静态示例）
+                      ...(msg.role === 'assistant' ? {
+                        header: (
+                          <Think title="深度思考" style={{ marginBottom: 8 }}>
+                            这是一个深度思考的示例内容。AI 正在分析您的问题，考虑多个角度和可能的解决方案...
+                          </Think>
+                        )
+                      } : {})
+                    }))}
+                    style={{ background: 'transparent', flex: 1 }}
+                  />
+                </>
+              )}
+            </div>
+          </main>
+          
+          {/* 输入区域 */}
+          <footer style={{
+            padding: '16px 24px',
+            background: '#fff',
+            borderTop: '1px solid #e8e8e8',
+          }}>
+            <div style={{ maxWidth: 800, margin: '0 auto' }}>
+              <Sender
+                value={inputValue}
+                onChange={setInputValue}
+                onSubmit={handleSend}
+                onCancel={() => {
+                  abort()
+                  setIsLoading(false)
+                  streamingIdRef.current = null
+                }}
+                loading={isLoading}
+                readOnly={isLoading}
+                placeholder="输入消息... (Enter 发送, Shift+Enter 换行)"
+              />
+              <div style={{ 
+                textAlign: 'center', 
+                fontSize: 12, 
+                color: '#999', 
+                marginTop: 8 
+              }}>
+                演示项目 · Ant Design X + SSE 流式响应
+              </div>
+            </div>
+          </footer>
+        </div>
+      </ConfigProvider>
+    </XProvider>
   )
 }
 
