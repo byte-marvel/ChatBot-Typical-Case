@@ -12,10 +12,16 @@ const genId = () => `msg_${++messageId}_${Date.now()}`
 const roles = {
   user: {
     placement: 'end',
+    avatar: (
+      <Avatar icon={<UserOutlined />} style={{ background: '#1677ff' }} />
+    ),
   },
   assistant: {
     placement: 'start',
     typing: { step: 2, interval: 50 },
+    avatar: (
+      <Avatar icon={<RobotOutlined />} style={{ background: 'linear-gradient(135deg, #1677ff 0%, #722ed1 100%)' }} />
+    ),
   },
 }
 

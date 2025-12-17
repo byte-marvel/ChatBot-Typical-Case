@@ -61,11 +61,11 @@ export function useSSE() {
               conversationIdRef.current = data.conversation_id
             }
             
-            if (data.event === 'message' && data.content) {
-              console.log('[SSE] Message:', data.content)
+            if (data.type === 'delta' && data.content) {
+              console.log('[SSE] Delta:', data.content)
               onDelta(data.content)
-            } else if (data.event === 'message_end') {
-              console.log('[SSE] Message end received')
+            } else if (data.type === 'done') {
+              console.log('[SSE] Done received')
               onDone()
             }
           } catch (e) {
