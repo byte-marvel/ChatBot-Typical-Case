@@ -1,8 +1,16 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { Bubble, Sender, Welcome, XProvider, Think } from '@ant-design/x'
 import { UserOutlined, RobotOutlined } from '@ant-design/icons'
 import { ConfigProvider, theme, Avatar } from 'antd'
 import { useSSE } from './hooks/useSSE'
+
+// 消息类型定义
+interface Message {
+  key: string
+  role: 'user' | 'assistant'
+  content: string
+  loading?: boolean
+}
 
 // 生成唯一 ID
 let messageId = 0
@@ -11,14 +19,14 @@ const genId = () => `msg_${++messageId}_${Date.now()}`
 // 角色配置
 const roles = {
   user: {
-    placement: 'end',
+    placement: 'end' as const,
     avatar: (
       <Avatar icon={<UserOutlined />} style={{ background: '#1677ff' }} />
     ),
   },
   assistant: {
-    placement: 'start',
-    typing: { step: 2, interval: 50 },
+    placement: 'start' as const,
+    typing: true,
     avatar: (
       <Avatar icon={<RobotOutlined />} style={{ background: 'linear-gradient(135deg, #1677ff 0%, #722ed1 100%)' }} />
     ),
@@ -26,17 +34,17 @@ const roles = {
 }
 
 function App() {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [inputValue, setInputValue] = useState('')
   const { sendMessage, abort } = useSSE()
   
   // 当前正在流式更新的消息 ID
-  const streamingIdRef = useRef(null)
+  const streamingIdRef = useRef<string | null>(null)
   
 
   // 更新流式消息内容
-  const appendContent = useCallback((content) => {
+  const appendContent = useCallback((content: string) => {
     console.log('[App] appendContent called:', content, 'streamingId:', streamingIdRef.current)
     setMessages(prev => {
       const updated = prev.map(msg => 
@@ -62,18 +70,18 @@ function App() {
   }, [])
 
   // 发送消息
-  const handleSend = useCallback((content) => {
+  const handleSend = useCallback((content: string) => {
     if (!content.trim()) return
     
     // 添加用户消息
-    const userMessage = {
+    const userMessage: Message = {
       key: genId(),
       role: 'user',
       content,
     }
     
     // 创建 AI 消息占位
-    const aiMessage = {
+    const aiMessage: Message = {
       key: genId(),
       role: 'assistant',
       content: '',

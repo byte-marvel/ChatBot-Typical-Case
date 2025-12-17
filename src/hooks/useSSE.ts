@@ -3,15 +3,26 @@ import { useCallback, useRef } from 'react'
 // SSE 接口配置
 const SSE_API_URL = '/api/chat'
 
+interface SSEData {
+  type?: 'delta' | 'done'
+  content?: string
+  conversation_id?: string
+}
+
 /**
  * SSE 流式请求 Hook
  * 使用 fetch + ReadableStream 处理 SSE，比 EventSource 更灵活
  */
 export function useSSE() {
-  const abortControllerRef = useRef(null)
-  const conversationIdRef = useRef(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const conversationIdRef = useRef<string | null>(null)
 
-  const sendMessage = useCallback(async (message, onDelta, onDone, onError) => {
+  const sendMessage = useCallback(async (
+    message: string,
+    onDelta: (content: string) => void,
+    onDone: () => void,
+    onError: (error: Error) => void
+  ) => {
     // 取消之前的请求
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
@@ -42,18 +53,18 @@ export function useSSE() {
         throw new Error(`HTTP ${response.status}`)
       }
       
-      const reader = response.body.getReader()
+      const reader = response.body!.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
       
       console.log('[SSE] Stream started')
       
       // 解析单行 SSE 数据的辅助函数
-      const parseLine = (line) => {
+      const parseLine = (line: string) => {
         console.log('[SSE] Parsing line:', line)
         if (line.startsWith('data: ')) {
           try {
-            const data = JSON.parse(line.slice(6))
+            const data: SSEData = JSON.parse(line.slice(6))
             console.log('[SSE] Parsed data:', data)
             
             // 保存 conversation_id 用于后续对话
@@ -102,7 +113,7 @@ export function useSSE() {
         }
       }
     } catch (error) {
-      if (error.name !== 'AbortError') {
+      if (error instanceof Error && error.name !== 'AbortError') {
         onError(error)
       }
     }
