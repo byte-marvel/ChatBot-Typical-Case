@@ -1,7 +1,27 @@
 import http from 'http'
 import { URL } from 'url'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const PORT = 3001
+
+// 存储小程序发送的语音/图片数据，供 H5 轮询
+// key: sessionId, value: { type: 'voice'|'image', data: string, timestamp: number }
+const sessionDataStore = new Map()
+
+// 清理过期数据（5分钟过期）
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, value] of sessionDataStore.entries()) {
+    if (now - value.timestamp > 5 * 60 * 1000) {
+      sessionDataStore.delete(key)
+    }
+  }
+}, 60 * 1000)
 
 // 模拟 AI 回复内容
 const mockResponses = [
@@ -84,6 +104,222 @@ const server = http.createServer((req, res) => {
       if (interval) clearInterval(interval)
     })
     
+    return
+  }
+  
+  // 功能3: 语音识别接口 - 接收音频文件并返回识别结果
+  // 注意：实际生产环境需要接入第三方语音识别服务（如百度、讯飞、腾讯云等）
+  if (url.pathname === '/api/voice-recognize' && req.method === 'POST') {
+    const chunks = []
+    req.on('data', chunk => chunks.push(chunk))
+    req.on('end', () => {
+      const buffer = Buffer.concat(chunks)
+      const contentType = req.headers['content-type'] || ''
+      
+      // 解析 sessionId
+      let sessionId = ''
+      const boundaryMatch = contentType.match(/boundary=(.+)/)
+      if (boundaryMatch) {
+        const boundary = boundaryMatch[1]
+        const parts = buffer.toString('binary').split('--' + boundary)
+        
+        for (const part of parts) {
+          if (part.includes('name="sessionId"')) {
+            const valueStart = part.indexOf('\r\n\r\n')
+            if (valueStart !== -1) {
+              sessionId = part.slice(valueStart + 4, part.lastIndexOf('\r\n')).trim()
+            }
+          }
+        }
+      }
+      
+      // TODO: 实际生产环境需要：
+      // 1. 保存音频文件
+      // 2. 调用第三方语音识别 API（百度、讯飞、腾讯云等）
+      // 3. 返回识别结果
+      
+      // 这里返回模拟结果，实际需要替换为真实的语音识别服务
+      console.log(`[Voice Recognize] Received audio for session: ${sessionId}`)
+      
+      // 模拟语音识别结果
+      const mockTexts = [
+        '你好，请问有什么可以帮助你的？',
+        '今天天气怎么样？',
+        '帮我查一下附近的餐厅',
+        '我想了解一下产品信息'
+      ]
+      const mockText = mockTexts[Math.floor(Math.random() * mockTexts.length)]
+      
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ 
+        success: true, 
+        text: mockText,
+        sessionId: sessionId
+      }))
+    })
+    return
+  }
+  
+  // 功能3: 接收小程序语音识别结果（用于中转给 H5）
+  if (url.pathname === '/api/voice-result' && req.method === 'POST') {
+    let body = ''
+    req.on('data', chunk => { body += chunk })
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body)
+        const { sessionId, text } = data
+        
+        if (!sessionId || !text) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Missing sessionId or text' }))
+          return
+        }
+        
+        // 存储语音识别结果
+        sessionDataStore.set(sessionId, {
+          type: 'voice',
+          data: text,
+          timestamp: Date.now()
+        })
+        
+        console.log(`[Voice] Stored for session ${sessionId}: ${text}`)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: true }))
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid JSON' }))
+      }
+    })
+    return
+  }
+  
+  // 功能4: 接收小程序图片上传结果
+  if (url.pathname === '/api/image-result' && req.method === 'POST') {
+    let body = ''
+    req.on('data', chunk => { body += chunk })
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body)
+        const { sessionId, imageUrl } = data
+        
+        if (!sessionId || !imageUrl) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Missing sessionId or imageUrl' }))
+          return
+        }
+        
+        // 存储图片 URL
+        sessionDataStore.set(sessionId, {
+          type: 'image',
+          data: imageUrl,
+          timestamp: Date.now()
+        })
+        
+        console.log(`[Image] Stored for session ${sessionId}: ${imageUrl}`)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ success: true }))
+      } catch (e) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid JSON' }))
+      }
+    })
+    return
+  }
+  
+  // 功能4: 图片上传接口
+  if (url.pathname === '/api/upload-image' && req.method === 'POST') {
+    const chunks = []
+    req.on('data', chunk => chunks.push(chunk))
+    req.on('end', () => {
+      // 简单处理 multipart/form-data，实际生产环境建议使用 multer 等库
+      const buffer = Buffer.concat(chunks)
+      const contentType = req.headers['content-type'] || ''
+      
+      // 生成文件名
+      const filename = `image_${Date.now()}.jpg`
+      const uploadDir = path.join(__dirname, 'uploads')
+      
+      // 确保上传目录存在
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true })
+      }
+      
+      // 从 multipart 数据中提取文件内容（简化处理）
+      const boundaryMatch = contentType.match(/boundary=(.+)/)
+      if (boundaryMatch) {
+        const boundary = boundaryMatch[1]
+        const parts = buffer.toString('binary').split('--' + boundary)
+        
+        for (const part of parts) {
+          if (part.includes('filename=')) {
+            // 找到文件数据的起始位置（两个换行后）
+            const headerEnd = part.indexOf('\r\n\r\n')
+            if (headerEnd !== -1) {
+              const fileData = part.slice(headerEnd + 4, part.lastIndexOf('\r\n'))
+              const filePath = path.join(uploadDir, filename)
+              fs.writeFileSync(filePath, fileData, 'binary')
+              
+              // 返回文件 URL
+              const fileUrl = `http://localhost:${PORT}/uploads/${filename}`
+              res.writeHead(200, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify({ success: true, url: fileUrl }))
+              return
+            }
+          }
+        }
+      }
+      
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Failed to parse upload' }))
+    })
+    return
+  }
+  
+  // 静态文件服务（用于访问上传的图片）
+  if (url.pathname.startsWith('/uploads/')) {
+    const filename = url.pathname.replace('/uploads/', '')
+    const filePath = path.join(__dirname, 'uploads', filename)
+    
+    if (fs.existsSync(filePath)) {
+      const ext = path.extname(filename).toLowerCase()
+      const mimeTypes = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif'
+      }
+      
+      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' })
+      fs.createReadStream(filePath).pipe(res)
+      return
+    }
+  }
+  
+  // H5 轮询接口 - 获取小程序发送的数据
+  if (url.pathname === '/api/poll' && req.method === 'GET') {
+    const sessionId = url.searchParams.get('sessionId')
+    
+    if (!sessionId) {
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Missing sessionId' }))
+      return
+    }
+    
+    const data = sessionDataStore.get(sessionId)
+    
+    if (data) {
+      // 获取后删除数据（一次性消费）
+      sessionDataStore.delete(sessionId)
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ 
+        success: true, 
+        type: data.type, 
+        data: data.data 
+      }))
+    } else {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ success: true, data: null }))
+    }
     return
   }
   

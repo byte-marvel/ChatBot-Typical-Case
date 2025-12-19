@@ -1,0 +1,165 @@
+/**chatbot.wxss - web-view 页面样式**/
+/* 工具栏 - 固定在输入框左上角 */
+.toolbar {
+  position: fixed;
+  left: 16rpx;
+  bottom: 220rpx;
+  z-index: 9999;
+  display: flex;
+  flex-direction: row;
+}
+
+/* 工具栏按钮 */
+.toolbar-btn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 12rpx 20rpx;
+  margin-right: 16rpx;
+  border-radius: 32rpx;
+  background-color: transparent;
+  border: 2rpx solid #e8e8e8;
+}
+
+.toolbar-btn.voice {
+  border-color: #1677ff;
+}
+
+.toolbar-btn.camera {
+  border-color: #52c41a;
+}
+
+.toolbar-btn.recording {
+  background-color: #ff4d4f;
+  border-color: #ff4d4f;
+}
+
+.toolbar-btn.recording .toolbar-label {
+  color: #ffffff;
+}
+
+/* 工具栏图标 */
+.toolbar-icon-text {
+  font-size: 32rpx;
+  line-height: 36rpx;
+}
+
+/* 工具栏文字 */
+.toolbar-label {
+  font-size: 24rpx;
+  color: #333333;
+  margin-left: 8rpx;
+  line-height: 36rpx;
+}
+
+/* 录音遮罩层 */
+.recording-mask {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 200rpx;
+  background-color: rgba(0, 0, 0, 0.7);
+  z-index: 9998;
+}
+
+/* 录音提示区域 */
+.recording-tip {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 400rpx;
+  margin-left: -200rpx;
+  margin-top: -60rpx;
+  text-align: center;
+}
+
+.recording-icon {
+  font-size: 60rpx;
+  margin-bottom: 10rpx;
+}
+
+.recording-text {
+  font-size: 28rpx;
+  color: #ffffff;
+  margin-bottom: 20rpx;
+}
+
+/* 录音波形 */
+.recording-wave {
+  height: 40rpx;
+  text-align: center;
+}
+
+.wave-bar {
+  display: inline-block;
+  width: 8rpx;
+  height: 20rpx;
+  margin: 0 6rpx;
+  background-color: #1677ff;
+  border-radius: 4rpx;
+}
+
+/* 取消录音状态 */
+.recording-mask.cancel {
+  background-color: rgba(255, 77, 79, 0.8);
+}
+
+.recording-mask.cancel .recording-text {
+  color: #ffffff;
+}
+
+/* Debug 调试面板 */
+.debug-panel {
+  position: fixed;
+  left: 20rpx;
+  top: 100rpx;
+  right: 20rpx;
+  max-height: 600rpx;
+  background-color: rgba(0, 0, 0, 0.85);
+  border-radius: 16rpx;
+  padding: 20rpx;
+  z-index: 10000;
+  overflow: hidden;
+}
+
+.debug-header {
+  height: 50rpx;
+  line-height: 50rpx;
+  margin-bottom: 16rpx;
+}
+
+.debug-title {
+  font-size: 28rpx;
+  color: #52c41a;
+  display: inline-block;
+}
+
+.debug-close {
+  position: absolute;
+  right: 20rpx;
+  top: 20rpx;
+  width: 50rpx;
+  height: 50rpx;
+  line-height: 50rpx;
+  text-align: center;
+  font-size: 32rpx;
+  color: #ffffff;
+}
+
+.debug-text {
+  font-size: 24rpx;
+  color: #ffffff;
+  line-height: 1.6;
+  word-break: break-all;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  margin-bottom: 16rpx;
+}
+
+.debug-image {
+  width: 100%;
+  max-height: 400rpx;
+  border-radius: 8rpx;
+}

@@ -1,0 +1,59 @@
+<!--chatbot.wxml - web-view 页面-->
+<!-- web-view 加载 H5 页面 -->
+<web-view 
+  wx:if="{{webviewUrl}}" 
+  src="{{webviewUrl}}" 
+  bindmessage="onMessage"
+  bindload="onWebviewLoad"
+>
+  <!-- 录音时的遮罩层 -->
+  <cover-view wx:if="{{isRecording}}" class="recording-mask {{isCancelRecording ? 'cancel' : ''}}">
+    <cover-view class="recording-tip">
+      <cover-view class="recording-icon">{{isCancelRecording ? '❌' : '🎤'}}</cover-view>
+      <cover-view class="recording-text">{{isCancelRecording ? '松开取消发送' : '松开发送，上滑取消'}}</cover-view>
+      <cover-view wx:if="{{!isCancelRecording}}" class="recording-wave">
+        <cover-view class="wave-bar"></cover-view>
+        <cover-view class="wave-bar"></cover-view>
+        <cover-view class="wave-bar"></cover-view>
+        <cover-view class="wave-bar"></cover-view>
+        <cover-view class="wave-bar"></cover-view>
+      </cover-view>
+    </cover-view>
+  </cover-view>
+
+  <!-- 工具栏 - 固定在输入框左上角，等 H5 页面 ready 后显示 -->
+  <cover-view wx:if="{{webviewReady}}" class="toolbar">
+    <!-- 语音按钮 -->
+    <cover-view 
+      wx:if="{{showVoiceBtn}}"
+      class="toolbar-btn voice {{isRecording ? 'recording' : ''}}" 
+      bindtouchstart="onVoiceTouchStart"
+      bindtouchend="onVoiceTouchEnd"
+      bindtouchmove="onVoiceTouchMove"
+      bindtouchcancel="onVoiceTouchCancel"
+    >
+      <cover-view class="toolbar-icon-text">🎤</cover-view>
+      <cover-view class="toolbar-label">语音</cover-view>
+    </cover-view>
+    
+    <!-- 拍照按钮 -->
+    <cover-view 
+      wx:if="{{showCameraBtn}}"
+      class="toolbar-btn camera" 
+      bindtap="onCameraTap"
+    >
+      <cover-view class="toolbar-icon-text">📷</cover-view>
+      <cover-view class="toolbar-label">拍照</cover-view>
+    </cover-view>
+  </cover-view>
+  
+  <!-- Debug 调试面板 -->
+  <cover-view wx:if="{{debugMode && (debugInfo || debugImageUrl)}}" class="debug-panel">
+    <cover-view class="debug-header">
+      <cover-view class="debug-title">🔧 Debug</cover-view>
+      <cover-view class="debug-close" bindtap="closeDebugPanel">✕</cover-view>
+    </cover-view>
+    <cover-view wx:if="{{debugInfo}}" class="debug-text">{{debugInfo}}</cover-view>
+    <cover-image wx:if="{{debugImageUrl}}" class="debug-image" src="{{debugImageUrl}}"></cover-image>
+  </cover-view>
+</web-view>
