@@ -59,3 +59,11 @@ html, body {
 .ant-sender {
   border-color: #ff7d00 !important;
 }
+
+/* 减小消息之间的上下间距 */
+.ant-bubble-list .ant-bubble {
+  margin-bottom: 1px !important;
+  margin-top: 1px !important;
+  padding-bottom: 1px !important;
+  padding-top: 10px !important;
+}

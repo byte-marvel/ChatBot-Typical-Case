@@ -422,7 +422,7 @@ function App() {
         <Avatar 
           src={isLoading ? robotAvatarDynamic : robotAvatar}
           size={60}
-          style={{ marginBottom: -20, zIndex: 107 }} 
+          style={{ marginBottom: -25, zIndex: 1 }} 
         />
       ),
     },
@@ -533,11 +533,11 @@ function App() {
     if (!hasCards && !showCopyButton) return undefined
     
     return (
-      <div>
+      <div style={{ width: '100%' }}>
         {hasCards && renderCardList(msg.cardInfo!)}
         {showCopyButton && (
-          <div style={{ marginTop: hasCards ? 12 : 0 }}>
-            <Actions.Copy text={msg.content} />
+          <div style={{ marginTop: hasCards ? 12 : 0, display: 'flex', justifyContent: 'flex-end' }}>
+            <Actions.Copy text={msg.content} style={{ fontSize: 18 }} />
           </div>
         )}
       </div>
@@ -810,10 +810,10 @@ function App() {
                 style={{ 
                   flex: 1, 
                   overflow: 'auto', 
-                  padding: '16px',
+                  padding: '2px',
                 }}
               >
-                <div style={{ maxWidth: 800, margin: '0 auto' }}>
+                <div style={{ width: '100%' }}>
                   <Bubble.List
                     items={messages.map(msg => ({
                       key: msg.key,
@@ -823,21 +823,25 @@ function App() {
                       // footer 包含卡片列表和复制按钮
                       footer: renderBubbleFooter(msg),
                       footerPlacement: 'inner-start',
+                      styles: {
+                        content: { fontSize: 15 }
+                      }
                     }))}
                     style={{ background: 'transparent' }}
                   />
                   
                   {/* 推荐问题清单 */}
                   {suggestedQuestions.length > 0 && (
-                    <div style={{ marginTop: -20, padding: '12px 16px', background: '#fff', borderRadius: 8 }}>
-                      <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>推荐问题：</div>
+                    <div style={{ marginTop: -15, padding: '12px 16px', background: '#fff', borderRadius: 8 }}>
+                      <div style={{ fontSize: 14, color: '#333', marginBottom: 8 , fontWeight: 500 }}>推荐问题：</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {suggestedQuestions.map((question, index) => (
                           <Card 
                             key={index}
                             size="small"
                             hoverable
-                            style={{ cursor: 'pointer', width: 'fit-content', fontSize: 12 }}
+                            style={{ cursor: 'pointer', width: 'fit-content', fontSize: 14 , border: '1px solid #ccc' , color: '#333' }}
+                            styles={{ body: { padding: '6px 8px' }}}
                             onClick={() => sendExample(question)}
                           >
                             {question}
