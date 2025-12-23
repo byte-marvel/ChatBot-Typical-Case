@@ -1,15 +1,20 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Bubble, Sender, XProvider, ThoughtChain } from '@ant-design/x'
+import { Bubble, Sender, XProvider, ThoughtChain, Actions, FileCard } from '@ant-design/x'
 import type { ThoughtChainItemType } from '@ant-design/x'
 import { Think } from '@ant-design/x'
 import XMarkdown from '@ant-design/x-markdown'
 import robotAvatar from './assets/robot-avatar.png'
-import EnvironmentOutlined from '@ant-design/icons/EnvironmentOutlined'
-import PlusOutlined from '@ant-design/icons/PlusOutlined'
+import iconNew from './assets/icon_new.png'
+import bgWelcome from './assets/img_bg.jpg'
+import welcomeBanner from './assets/welcome.png'
+import robotGif from './assets/robot.gif'
+import robotPng from './assets/robot.png'
+import bgChat from './assets/img_bg_chat.png'
 import ArrowDownOutlined from '@ant-design/icons/ArrowDownOutlined'
 import CheckCircleOutlined from '@ant-design/icons/CheckCircleOutlined'
 import LoadingOutlined from '@ant-design/icons/LoadingOutlined'
-import { ConfigProvider, theme, Avatar, Tag, message, Modal, Image, Skeleton } from 'antd'
+import { ConfigProvider, theme, Avatar, Tag, message, Modal, Image, Skeleton, Card } from 'antd'
+import zhCN from 'antd/locale/zh_CN'
 import { useSSE, CardInfo } from './hooks/useSSE'
 import { useMiniProgram } from './hooks/useMiniProgram'
 import { API_CONFIG } from './config'
@@ -43,7 +48,7 @@ const ImagePlaceholder = () => (
     verticalAlign: 'middle',
     margin: '8px 0',
   }}>
-    <Skeleton.Image active style={{ width: 344, height: 195 }} />
+    <Skeleton.Image active style={{ width: 340, height: 195 }} />
   </div>
 )
 
@@ -116,12 +121,12 @@ function App() {
     fetchSuggestedQuestions, 
     fetchIndexQuestions,
     clearConversation,
+    abort,
   } = useSSE()
   
   // 小程序交互 Hook
   const { 
     sessionId, 
-    location, 
     isInMiniProgram, 
     openLink,
     notifyReady,
@@ -131,7 +136,7 @@ function App() {
 
   // 测试链接
   const TEST_SHORT_LINK = '#小程序://大众点评丨美食团购外卖酒店电影/GCqwbsf3nFrx6nn'
-  const TEST_SCHEMA_URL = 'weixin://dl/business/?appid=wxa75efa648b60994b&path=pages/index/index'
+  const TEST_SCHEMA_URL = 'weixin://dl/business/?appid=wxa735b18c5812d986&path=pages%2Findex%2Findex%3Fcontext%3Dgd%26page%3DgiftcardHome'
   
   // 当前正在流式更新的消息 ID
   const streamingIdRef = useRef<string | null>(null)
@@ -361,11 +366,29 @@ function App() {
     setIsScrolledToBottom(true)
   }, [])
 
-  // 检查滚动位置
+  // 上一次的 scrollTop，用于检测用户是否主动向上滚动
+  const lastScrollTopRef = useRef(0)
+
+  // 检查滚动位置 - 只有用户主动向上滚动时才停止自动滚动
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement
-    const isBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50
-    setIsScrolledToBottom(isBottom)
+    const { scrollTop, scrollHeight, clientHeight } = target
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight
+    const isBottom = distanceToBottom < 50
+    
+    // 检测用户是否主动向上滚动（scrollTop 减小）
+    const isUserScrollingUp = scrollTop < lastScrollTopRef.current - 10
+    
+    if (isUserScrollingUp && !isBottom) {
+      // 用户主动向上滚动，停止自动滚动
+      setIsScrolledToBottom(false)
+    } else if (isBottom) {
+      // 滚动到底部，恢复自动滚动
+      setIsScrolledToBottom(true)
+    }
+    // 其他情况（如内容高度增加导致的被动滚动）保持原状态不变
+    
+    lastScrollTopRef.current = scrollTop
   }, [])
 
   // 消息更新时自动滚动到底部
@@ -374,6 +397,18 @@ function App() {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight
     }
   }, [messages, isScrolledToBottom])
+
+  // 推荐问题加载完成后滚动到底部
+  useEffect(() => {
+    if (suggestedQuestions.length > 0 && isScrolledToBottom && messageListRef.current) {
+      // 使用 requestAnimationFrame 确保 DOM 渲染完成后再滚动
+      requestAnimationFrame(() => {
+        if (messageListRef.current) {
+          messageListRef.current.scrollTop = messageListRef.current.scrollHeight
+        }
+      })
+    }
+  }, [suggestedQuestions, isScrolledToBottom])
 
   // 角色配置
   const roles = {
@@ -417,7 +452,7 @@ function App() {
         icon: getThinkingStatusIcon('success'),
       },
       {
-        title: `${API_CONFIG.ROBOT_NAME}思考完成~`,
+        title: `${API_CONFIG.ROBOT_NAME}思考完成，已为您整理好答案 ✨`,
         status: 'success',
         icon: getThinkingStatusIcon('success'),
       },
@@ -427,7 +462,10 @@ function App() {
       <div>
         {msg.role === 'assistant' && !msg.isWelcome && !msg.isStop && (
           <div style={{ marginBottom: 8 }}>
-            <Think title="思维链">
+            <Think 
+              title={<span>思考完成 <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} /></span>}
+              defaultExpanded={false}
+            >
               <ThoughtChain items={completedThinkingItems} />
             </Think>
           </div>
@@ -446,33 +484,21 @@ function App() {
         {msg.cardInfo && msg.cardInfo.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
             {msg.cardInfo.map((card, index) => (
-              <div 
-                key={index}
-                onClick={() => openCardModal(card)}
-                style={{
-                  width: 140,
-                  borderRadius: 8,
-                  overflow: 'hidden',
-                  background: '#fff',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                }}
-              >
-                <Image 
-                  src={card.image} 
-                  alt={card.title}
-                  preview={false}
-                  style={{ width: '100%', height: 100, objectFit: 'cover' }}
+              <FileCard
+                  key={index}
+                  type="image"
+                  name={card.title}
+                  description={card.desc}
+                  onClick={() => openCardModal(card)}
+                  imageProps={{
+                    src: card.image,
+                    preview: false,
+                  }}
+                  styles={{
+                    root: { borderRadius: 8, overflow: 'hidden', cursor: 'pointer' },
+                    file: { borderRadius: 8, overflow: 'hidden' },
+                  }}
                 />
-                <div style={{ padding: 8 }}>
-                  <div style={{ fontWeight: 500, fontSize: 13, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {card.title}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#999', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                    {card.desc}
-                  </div>
-                </div>
-              </div>
             ))}
           </div>
         )}
@@ -483,9 +509,10 @@ function App() {
   return (
     <XProvider>
       <ConfigProvider
+        locale={zhCN}
         theme={{
           algorithm: theme.defaultAlgorithm,
-          token: { colorPrimary: '#1677ff' },
+          token: { colorPrimary: '#ff7d00', borderRadius: 8 },
         }}
       >
         <div style={{ 
@@ -493,7 +520,11 @@ function App() {
           width: '100%',
           display: 'flex', 
           flexDirection: 'column',
-          background: '#f5f5f5',
+          background: '#F5F7FA',
+          backgroundImage: `url(${showWelcome ? bgWelcome : bgChat})`,
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
           overflow: 'hidden',
           position: 'absolute',
           top: 0,
@@ -501,71 +532,61 @@ function App() {
           right: 0,
           bottom: 0,
         }}>
-          {/* 头部 */}
-          <header style={{
-            padding: '12px 16px',
-            background: '#fff',
-            borderBottom: '1px solid #e8e8e8',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexShrink: 0,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <img 
-                src={robotAvatar} 
-                alt="robot" 
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: '50%',
-                }}
-              />
-              <div>
-                <h1 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>{API_CONFIG.ROBOT_NAME}</h1>
-                <p style={{ margin: 0, fontSize: 11, color: '#999' }}>豫园AI幸福小管家</p>
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {/* 位置信息 */}
-              {location.latitude && location.longitude && (
-                <Tag icon={<EnvironmentOutlined />} color="blue">
-                  {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-                </Tag>
-              )}
-              
-              {/* 状态指示器 */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: isLoading ? '#faad14' : '#52c41a',
-                }} />
-                <span style={{ fontSize: 13, color: '#666' }}>
-                  {isLoading ? '正在输入...' : '在线'}
-                </span>
+          {/* 头部 - 仅在聊天界面显示 */}
+          {!showWelcome && (
+            <header style={{
+              padding: '0 16px',
+              height: 44,
+              background: '#fff',
+              borderBottom: '1px solid #eee',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* 返回按钮 */}
+                <div 
+                  onClick={() => {
+                    // 中断当前SSE请求并清理状态（与新建对话相同）
+                    abort()
+                    clearConversation()
+                    setMessages([])
+                    setSuggestedQuestions([])
+                    setShowWelcome(true)
+                    setIsLoading(false)
+                    setInputValue('')
+                    setThinkingItems([])
+                  }}
+                  style={{ 
+                    cursor: 'pointer', 
+                    padding: 8,
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" fill="#333"/>
+                  </svg>
+                </div>
+                {/* 标题 */}
+                <h1 style={{ margin: 0, fontSize: 18, fontWeight: 500, color: '#333' }}>{API_CONFIG.ROBOT_NAME}</h1>
               </div>
               
               {/* 新建对话按钮 */}
-              {!showWelcome && (
-                <div 
-                  onClick={handleNewChat}
-                  style={{ 
-                    cursor: 'pointer', 
-                    padding: '4px 8px',
-                    borderRadius: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                  }}
-                >
-                  <PlusOutlined style={{ fontSize: 16 }} />
-                </div>
-              )}
-            </div>
-          </header>
+              <div 
+                onClick={handleNewChat}
+                style={{ 
+                  cursor: 'pointer', 
+                  padding: 8,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <img src={iconNew} alt="新建对话" style={{ width: 25, height: 25 }} />
+              </div>
+            </header>
+          )}
           
           {/* 消息区域 */}
           <main style={{ 
@@ -582,57 +603,127 @@ function App() {
                 display: 'flex', 
                 flexDirection: 'column', 
                 alignItems: 'center',
-                padding: '40px 16px',
+                padding: '0 10px',
                 overflow: 'auto',
               }}>
-                {/* 欢迎图片和头像 */}
-                <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                  <Avatar 
-                    size={100} 
-                    src={robotAvatar}
+                {/* 欢迎横幅图片 */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center',
+                  marginTop: 40,
+                }}>
+                  <img 
+                    src={welcomeBanner} 
+                    alt="welcome" 
+                    style={{ height: 100 }} 
                   />
-                  <h2 style={{ margin: '16px 0 8px', fontSize: 18 }}>你可以这样对我说:</h2>
                 </div>
                 
-                {/* 卡片式推荐问题 */}
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 24 }}>
+                {/* 机器人头像 */}
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                }}>
+                  <img 
+                    src={robotGif} 
+                    alt="robot" 
+                    style={{ width: 200, height: 265 }}
+                    onError={(e) => { (e.target as HTMLImageElement).src = robotPng }}
+                  />
+                </div>
+                
+                {/* 提示文字 */}
+                <div style={{ 
+                  fontSize: 16, 
+                  color: '#351C1C', 
+                  marginBottom: 10, 
+                  fontWeight: 600,
+                  width: '100%',
+                  textAlign: 'left',
+                  paddingLeft: 10,
+                }}>
+                  你可以这样对我说:
+                </div>
+                
+                {/* 卡片式推荐问题 - 三列布局 */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: 12, 
+                  width: '100%', 
+                  padding: '0 10px', 
+                  boxSizing: 'border-box',
+                  marginBottom: 24,
+                }}>
                   {cardQuestions.map((item, index) => (
                     <div 
                       key={index}
                       onClick={() => sendExample(item.question)}
                       style={{
+                        flex: 1,
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        gap: 8,
-                        padding: '12px 16px',
+                        justifyContent: 'flex-start',
+                        padding: '8px 5px 12px 5px',
                         background: '#fff',
-                        borderRadius: 24,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        borderRadius: 8,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                         cursor: 'pointer',
                       }}
                     >
-                      <img src={item.image} alt="" style={{ width: 24, height: 24 }} />
-                      <span style={{ fontSize: 14 }}>{item.question}</span>
+                      <div 
+                        style={{ 
+                          width: 40, 
+                          height: 40, 
+                          marginBottom: 6,
+                          backgroundImage: `url(${item.image})`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                        }} 
+                      />
+                      <span style={{ 
+                        fontSize: 14, 
+                        color: '#666', 
+                        textAlign: 'center', 
+                        lineHeight: 1.1,
+                        wordBreak: 'break-word',
+                        fontWeight: 400,
+                      }}>
+                        {item.question}
+                      </span>
                     </div>
                   ))}
                 </div>
                 
                 {/* 滚动式推荐问题 - 第一行 */}
+                {(() => {
+                  const midPoint = Math.ceil(flowingQuestions.length / 2);
+                  const firstRow = flowingQuestions.slice(0, midPoint);
+                  const secondRow = flowingQuestions.slice(midPoint);
+                  return (
+                    <>
                 <div style={{ width: '100%', overflow: 'hidden', marginBottom: 8 }}>
                   <div className="marquee-content">
-                    {[...flowingQuestions.slice(0, 4), ...flowingQuestions.slice(0, 4)].map((question, index) => (
+                    {[...firstRow, ...firstRow].map((question, index) => (
                       <span 
                         key={index}
                         onClick={() => sendExample(question)}
                         style={{
                           display: 'inline-block',
-                          padding: '8px 16px',
+                          padding: '5px 10px',
                           background: '#fff',
-                          borderRadius: 16,
-                          marginRight: 12,
-                          fontSize: 13,
+                          borderRadius: 18,
+                          margin: 10,
+                          fontSize: 14,
+                          color: '#666',
+                          lineHeight: 1.4,
                           cursor: 'pointer',
                           whiteSpace: 'nowrap',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                         }}
                       >
                         {question}
@@ -642,22 +733,25 @@ function App() {
                 </div>
                 
                 {/* 滚动式推荐问题 - 第二行 */}
-                {flowingQuestions.length > 4 && (
+                {secondRow.length > 0 && (
                   <div style={{ width: '100%', overflow: 'hidden' }}>
-                    <div className="marquee-content marquee-reverse">
-                      {[...flowingQuestions.slice(4), ...flowingQuestions.slice(4)].map((question, index) => (
+                    <div className="marquee-content">
+                      {[...secondRow, ...secondRow].map((question, index) => (
                         <span 
                           key={index}
                           onClick={() => sendExample(question)}
                           style={{
                             display: 'inline-block',
-                            padding: '8px 16px',
+                            padding: '5px 10px',
                             background: '#fff',
-                            borderRadius: 16,
-                            marginRight: 12,
-                            fontSize: 13,
+                            borderRadius: 18,
+                            margin: 10,
+                            fontSize: 14,
+                            color: '#666',
+                            lineHeight: 1.4,
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
                           }}
                         >
                           {question}
@@ -666,6 +760,9 @@ function App() {
                     </div>
                   </div>
                 )}
+                    </>
+                  );
+                })()}
               </div>
             ) : (
               // 聊天界面
@@ -685,24 +782,30 @@ function App() {
                       role: msg.role,
                       ...roles[msg.role],
                       content: renderMessageContent(msg),
+                      // 为 assistant 消息添加复制按钮（仅在内容完全输出后显示）
+                      footer: msg.role === 'assistant' && msg.isCompleted && msg.content
+                        ? <Actions.Copy text={msg.content} />
+                        : undefined,
+                      footerPlacement: 'inner-end',
                     }))}
                     style={{ background: 'transparent' }}
                   />
                   
                   {/* 推荐问题清单 */}
                   {suggestedQuestions.length > 0 && (
-                    <div style={{ marginTop: 16, padding: '12px 16px', background: '#fff', borderRadius: 8 }}>
+                    <div style={{ marginTop: -20, padding: '12px 16px', background: '#fff', borderRadius: 8 }}>
                       <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>推荐问题：</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                         {suggestedQuestions.map((question, index) => (
-                          <Tag 
+                          <Card 
                             key={index}
-                            color="blue"
-                            style={{ cursor: 'pointer', padding: '4px 12px' }}
+                            size="small"
+                            hoverable
+                            style={{ cursor: 'pointer', width: 'fit-content', fontSize: 12 }}
                             onClick={() => sendExample(question)}
                           >
                             {question}
-                          </Tag>
+                          </Card>
                         ))}
                       </div>
                     </div>
@@ -835,7 +938,7 @@ function App() {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #1677ff;
+            background: #ff7d00;
             animation: loading-bounce 1.4s infinite ease-in-out both;
           }
           
@@ -868,6 +971,20 @@ function App() {
           }
           .ant-bubble-content-inner {
             max-width: 100% !important;
+          }
+          
+          /* 用户消息气泡颜色 - 匹配原项目 */
+          .ant-bubble[class*="end"] .ant-bubble-content {
+            background-color: #F0A955 !important;
+            color: #161616 !important;
+            border-radius: 16px 16px 4px 16px !important;
+          }
+          
+          /* AI消息气泡颜色 - 匹配原项目 */
+          .ant-bubble[class*="start"] .ant-bubble-content {
+            background-color: #F5EEE4 !important;
+            color: #161616 !important;
+            border-radius: 16px 16px 16px 4px !important;
           }
         `}</style>
       </ConfigProvider>

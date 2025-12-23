@@ -44,3 +44,18 @@ html, body {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+
+/* Bubble 内图片圆角 */
+.ant-bubble-content .x-markdown img {
+  border-radius: 8px;
+}
+
+/* 减少 hr 上下边距 */
+.ant-bubble-content .x-markdown hr {
+  margin: 2px 0;
+}
+
+/* Sender 输入框边框使用主题色 */
+.ant-sender {
+  border-color: #ff7d00 !important;
+}
