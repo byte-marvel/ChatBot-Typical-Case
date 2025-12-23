@@ -425,7 +425,7 @@ function App() {
         <Avatar 
           src={isLoading ? robotAvatarDynamic : robotAvatar}
           size={60}
-          style={{ marginBottom: -25, zIndex: 1 }} 
+          style={{ marginBottom: -25, marginLeft: -5, zIndex: 1 }} 
         />
       ),
     },
