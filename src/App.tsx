@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Bubble, Sender, XProvider, ThoughtChain, Actions } from '@ant-design/x'
+import { Bubble, Sender, XProvider, Actions } from '@ant-design/x'
 import type { ThoughtChainItemType } from '@ant-design/x'
-import { Think } from '@ant-design/x'
 import XMarkdown from '@ant-design/x-markdown'
 import robotAvatar from './assets/robot-avatar.png'
 import robotAvatarDynamic from './assets/robot-avatar-dynamic.gif'
@@ -278,19 +277,21 @@ function App() {
     setInputValue('')
     setIsScrolledToBottom(true)
     
-    // 步骤2: 发送 SSE 请求前添加数据加载状态（步骤1完成，步骤2 loading）
-    setThinkingItems([
-      {
-        title: `${API_CONFIG.ROBOT_NAME}开始思考~`,
-        status: 'success',
-        icon: getThinkingStatusIcon('success'),
-      },
-      {
-        title: '数据加载 ing，马上就好～',
-        status: 'loading',
-        icon: getThinkingStatusIcon('loading'),
-      },
-    ])
+    // 延迟1秒后切换到步骤2: 数据加载状态
+    setTimeout(() => {
+      setThinkingItems([
+        {
+          title: `${API_CONFIG.ROBOT_NAME}开始思考~`,
+          status: 'success',
+          icon: getThinkingStatusIcon('success'),
+        },
+        {
+          title: '数据加载 ing，马上就好～',
+          status: 'loading',
+          icon: getThinkingStatusIcon('loading'),
+        },
+      ])
+    }, 1000)
     
     // 发送 SSE 请求
     sendMessage(
@@ -430,47 +431,48 @@ function App() {
     },
   }
 
+  // 获取当前思考状态文本（只显示最新状态）
+  const getCurrentThinkingStatus = () => {
+    if (thinkingItems.length === 0) return ''
+    const lastItem = thinkingItems[thinkingItems.length - 1]
+    return lastItem.title
+  }
+
   // 渲染消息内容
   const renderMessageContent = (msg: Message) => {
     if (msg.loading) {
+      const currentStatus = getCurrentThinkingStatus()
+      const isLoading = thinkingItems.length > 0 && thinkingItems[thinkingItems.length - 1].status === 'loading'
       return (
         <div style={{ padding: '8px 0' }}>
-          <Think title="思维链">
-            <ThoughtChain items={thinkingItems} />
-          </Think>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 8,
+            color: '#666',
+            fontSize: 14,
+          }}>
+            {isLoading ? <LoadingOutlined style={{ color: '#1890ff' }} /> : <CheckCircleOutlined style={{ color: '#52c41a' }} />}
+            <span>{currentStatus || '思考中...'}</span>
+          </div>
         </div>
       )
     }
-    
-    // 思考完成的思维链状态（3个步骤全部完成）
-    const completedThinkingItems: ThoughtChainItemType[] = [
-      {
-        title: `${API_CONFIG.ROBOT_NAME}开始思考~`,
-        status: 'success',
-        icon: getThinkingStatusIcon('success'),
-      },
-      {
-        title: '数据加载 ing，马上就好～',
-        status: 'success',
-        icon: getThinkingStatusIcon('success'),
-      },
-      {
-        title: `${API_CONFIG.ROBOT_NAME}思考完成，已为您整理好答案 ✨`,
-        status: 'success',
-        icon: getThinkingStatusIcon('success'),
-      },
-    ]
     
     return (
       <div>
         {msg.role === 'assistant' && !msg.isWelcome && !msg.isStop && (
           <div style={{ marginBottom: 8 }}>
-            <Think 
-              title={<span>思考完成 <CheckCircleOutlined style={{ color: '#52c41a', marginLeft: 4 }} /></span>}
-              defaultExpanded={false}
-            >
-              <ThoughtChain items={completedThinkingItems} />
-            </Think>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 8,
+              color: '#666',
+              fontSize: 14,
+            }}>
+              <CheckCircleOutlined style={{ color: '#52c41a' }} />
+              <span>{`${API_CONFIG.ROBOT_NAME}思考完成~ `}</span>
+            </div>
           </div>
         )}
         {(() => {
