@@ -375,10 +375,12 @@ function App() {
     const target = e.target as HTMLDivElement
     const { scrollTop, scrollHeight, clientHeight } = target
     const distanceToBottom = scrollHeight - scrollTop - clientHeight
-    const isBottom = distanceToBottom < 50
+    const isBottom = distanceToBottom < 100
     
     // 检测用户是否主动向上滚动（scrollTop 减小）
     const isUserScrollingUp = scrollTop < lastScrollTopRef.current - 10
+    
+    // console.log('[Scroll Debug]', { scrollTop, scrollHeight, clientHeight, distanceToBottom, isBottom, isUserScrollingUp, lastScrollTop: lastScrollTopRef.current })
     
     if (isUserScrollingUp && !isBottom) {
       // 用户主动向上滚动，停止自动滚动
