@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { Bubble, Sender, XProvider, ThoughtChain, Actions, FileCard } from '@ant-design/x'
+import { Bubble, Sender, XProvider, ThoughtChain, Actions } from '@ant-design/x'
 import type { ThoughtChainItemType } from '@ant-design/x'
 import { Think } from '@ant-design/x'
 import XMarkdown from '@ant-design/x-markdown'
 import robotAvatar from './assets/robot-avatar.png'
+import robotAvatarDynamic from './assets/robot-avatar-dynamic.gif'
 import iconNew from './assets/icon_new.png'
 import bgWelcome from './assets/img_bg.jpg'
 import welcomeBanner from './assets/welcome.png'
@@ -419,9 +420,9 @@ function App() {
       placement: 'start' as const,
       header: (
         <Avatar 
-          src={robotAvatar}
+          src={isLoading ? robotAvatarDynamic : robotAvatar}
           size={60}
-          style={{ marginBottom: -20 }} 
+          style={{ marginBottom: -20, zIndex: 107 }} 
         />
       ),
     },
@@ -480,26 +481,63 @@ function App() {
           )
         })()}
         
-        {/* 卡片信息列表 */}
-        {msg.cardInfo && msg.cardInfo.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
-            {msg.cardInfo.map((card, index) => (
-              <FileCard
-                  key={index}
-                  type="image"
-                  name={card.title}
-                  description={card.desc}
-                  onClick={() => openCardModal(card)}
-                  imageProps={{
-                    src: card.image,
-                    preview: false,
-                  }}
-                  styles={{
-                    root: { borderRadius: 8, overflow: 'hidden', cursor: 'pointer' },
-                    file: { borderRadius: 8, overflow: 'hidden' },
-                  }}
+      </div>
+    )
+  }
+
+  // 渲染卡片列表（用于 Bubble footer）
+  const renderCardList = (cardInfo: CardInfo[]) => {
+    if (!cardInfo || cardInfo.length === 0) return null
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
+        {cardInfo.map((card, index) => (
+          <Card
+            key={index}
+            hoverable
+            onClick={() => openCardModal(card)}
+            styles={{
+              body: { padding: 0 },
+            }}
+            style={{ borderRadius: 8, overflow: 'hidden' }}
+          >
+            <div style={{ display: 'flex' }}>
+              <div style={{ width: 120, height: 90, flexShrink: 0 }}>
+                <img
+                  src={card.image}
+                  alt={card.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
-            ))}
+              </div>
+              <div style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 500, color: '#333', marginBottom: 8 }}>
+                  {card.title}
+                </div>
+                <div style={{ fontSize: 13, color: '#666', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const }}>
+                  {card.desc}
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  // 渲染 Bubble footer（包含卡片列表和复制按钮）
+  const renderBubbleFooter = (msg: Message) => {
+    if (msg.role !== 'assistant') return undefined
+    
+    const hasCards = msg.cardInfo && msg.cardInfo.length > 0
+    const showCopyButton = msg.isCompleted && msg.content
+    
+    if (!hasCards && !showCopyButton) return undefined
+    
+    return (
+      <div>
+        {hasCards && renderCardList(msg.cardInfo!)}
+        {showCopyButton && (
+          <div style={{ marginTop: hasCards ? 12 : 0 }}>
+            <Actions.Copy text={msg.content} />
           </div>
         )}
       </div>
@@ -782,11 +820,9 @@ function App() {
                       role: msg.role,
                       ...roles[msg.role],
                       content: renderMessageContent(msg),
-                      // 为 assistant 消息添加复制按钮（仅在内容完全输出后显示）
-                      footer: msg.role === 'assistant' && msg.isCompleted && msg.content
-                        ? <Actions.Copy text={msg.content} />
-                        : undefined,
-                      footerPlacement: 'inner-end',
+                      // footer 包含卡片列表和复制按钮
+                      footer: renderBubbleFooter(msg),
+                      footerPlacement: 'inner-start',
                     }))}
                     style={{ background: 'transparent' }}
                   />
@@ -795,7 +831,7 @@ function App() {
                   {suggestedQuestions.length > 0 && (
                     <div style={{ marginTop: -20, padding: '12px 16px', background: '#fff', borderRadius: 8 }}>
                       <div style={{ fontSize: 13, color: '#666', marginBottom: 8 }}>推荐问题：</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {suggestedQuestions.map((question, index) => (
                           <Card 
                             key={index}
@@ -844,6 +880,7 @@ function App() {
             background: '#fff',
             borderTop: '1px solid #e8e8e8',
             flexShrink: 0,
+            zIndex: 1071,
           }}>
             <div style={{ maxWidth: 800, margin: '0 auto', width: '100%' }}>
               <Sender
@@ -900,6 +937,12 @@ function App() {
           onCancel={() => setShowCardModal(false)}
           footer={null}
           title={currentCard?.title}
+          width={400}
+          centered
+          style={{ top: -60 }}
+          styles={{
+            body: { padding: '18px 16px',maxHeight: '80vh', overflowY: 'auto' },
+          }}
         >
           {currentCard && (
             <div>
@@ -908,7 +951,7 @@ function App() {
                 alt={currentCard.title}
                 style={{ width: '100%', borderRadius: 8 }}
               />
-              <p style={{ marginTop: 16 }}>{currentCard.desc}</p>
+              <p style={{ marginTop: 12, fontSize: 14, color: '#333', lineHeight: 1.6 }}>{currentCard.desc}</p>
             </div>
           )}
         </Modal>
